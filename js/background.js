@@ -419,15 +419,23 @@ var currentBadge;
 var pageSettings;
 var currentPageSetting;
 var fallbackLang;
+var sentenceBreakDash = "em"; // Default to em dash
 
-// Initialize default language from storage or browser setting
-chrome.storage.sync.get("defaultLanguage", function (data) {
-	if (data.defaultLanguage) {
-		fallbackLang = populateLangByCode(data.defaultLanguage);
-	} else {
-		fallbackLang = setDefaultLang();
-	}
-});
+// Initialize default language and sentence break dash preference from storage
+chrome.storage.sync.get(
+	["defaultLanguage", "sentenceBreakDash"],
+	function (data) {
+		if (data.defaultLanguage) {
+			fallbackLang = populateLangByCode(data.defaultLanguage);
+		} else {
+			fallbackLang = setDefaultLang();
+		}
+
+		if (data.sentenceBreakDash) {
+			sentenceBreakDash = data.sentenceBreakDash;
+		}
+	},
+);
 
 chrome.runtime.onMessage.addListener(function (req, sender, cb) {
 	// Handle popup requests
@@ -468,6 +476,13 @@ chrome.runtime.onMessage.addListener(function (req, sender, cb) {
 		return true;
 	}
 
+	// Handle sentence break dash preference update
+	if (req.action === "updateSentenceBreakDash") {
+		sentenceBreakDash = req.sentenceBreakDash || "em";
+		cb({});
+		return true;
+	}
+
 	// Handle content script initialization requests
 	chrome.storage.sync.get(STORAGE_KEY, function (storage) {
 		var pageSettingsFromStorage = storage[STORAGE_KEY];
@@ -476,7 +491,12 @@ chrome.runtime.onMessage.addListener(function (req, sender, cb) {
 		var defaultLang = fallbackLang || populateLangByCode("en");
 
 		if (!pageSettingsFromStorage) {
-			cb({ location: location, lang: defaultLang, enabled: true });
+			cb({
+				location: location,
+				lang: defaultLang,
+				enabled: true,
+				sentenceBreakDash: sentenceBreakDash,
+			});
 			pageSettings = [];
 			currentPageSetting = {
 				enabled: true,
@@ -491,7 +511,7 @@ chrome.runtime.onMessage.addListener(function (req, sender, cb) {
 
 			pageSettings = pageSettingsFromStorage;
 			currentPageSetting = getPageFromSettings(sender.tab.url);
-			cb(currentPageSetting);
+			cb({ ...currentPageSetting, sentenceBreakDash: sentenceBreakDash });
 			setBadge(
 				currentPageSetting.enabled ? BADGE.ON : BADGE.OFF,
 				sender.tab.id,
@@ -524,6 +544,7 @@ function toggle(tab, toggleLang) {
 			enabled: currentBadge === BADGE.ON,
 			lang: currentPageSetting.lang,
 			location: tab.url,
+			sentenceBreakDash: sentenceBreakDash,
 		},
 		function (res) {
 			if (!res) {

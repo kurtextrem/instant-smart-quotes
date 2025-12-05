@@ -21,6 +21,7 @@
 
 var enabled;
 var lang;
+var sentenceBreakDash = "em"; // Default to em dash
 
 var isTextField = function (elem) {
 	return !!(
@@ -89,6 +90,16 @@ var regex = function (g, trimTrailingSpaces) {
 	// Normalize multiple spaces to single space (but not at start of line to preserve indentation)
 	result = result.replace(/(\S)[ \t]{2,}/g, "$1 ");
 
+	// Sentence break dash: " - " → " — " or " – " based on user preference
+	// Requires word characters on BOTH sides to avoid matching list markers
+	// e.g., "text - more" converts, but "- item" or "  - [x]" do NOT
+	// Skip regex entirely if user chose to keep hyphens
+	if (sentenceBreakDash === "em") {
+		result = result.replace(/(\w) - (\w)/g, "$1 — $2");
+	} else if (sentenceBreakDash === "en") {
+		result = result.replace(/(\w) - (\w)/g, "$1 – $2");
+	}
+
 	return (
 		result
 
@@ -152,11 +163,6 @@ var regex = function (g, trimTrailingSpaces) {
 
 			// En dash for date ranges (January-March, Mon-Fri)
 			.replace(/(\b[A-Z][a-z]{2,})\s*-\s*(\b[A-Z][a-z]{2,})/g, "$1–$2")
-
-			// Em dash for sentence breaks: " - " → " — "
-			// Requires word characters on BOTH sides to avoid matching list markers
-			// e.g., "text - more" converts, but "- item" or "  - [x]" do NOT
-			.replace(/(\w) - (\w)/g, "$1 — $2")
 
 			// === ELLIPSIS ===
 			.replace(/([^.…])\.{3}([^.…])/g, "$1…$2")
@@ -277,12 +283,18 @@ chrome.runtime.onMessage.addListener(function (req, sender, cb) {
 	// Handle initialization
 	enabled = req.enabled;
 	lang = req.lang;
+	if (req.sentenceBreakDash) {
+		sentenceBreakDash = req.sentenceBreakDash;
+	}
 	cb({ location: req.location });
 });
 
 chrome.runtime.sendMessage({ question: "enabled" }, function (res) {
 	enabled = res.enabled;
 	lang = res.lang;
+	if (res.sentenceBreakDash) {
+		sentenceBreakDash = res.sentenceBreakDash;
+	}
 });
 
 // Format entire field or selection via context menu

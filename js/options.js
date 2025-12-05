@@ -13,7 +13,7 @@ chrome.runtime.sendMessage({ action: "getConstants" }, function (response) {
 
 	// Load saved default language
 	chrome.storage.sync.get(
-		["defaultLanguage", "enableContextMenu"],
+		["defaultLanguage", "enableContextMenu", "sentenceBreakDash"],
 		function (data) {
 			if (data.defaultLanguage) {
 				select.value = data.defaultLanguage;
@@ -22,6 +22,11 @@ chrome.runtime.sendMessage({ action: "getConstants" }, function (response) {
 			// Load context menu preference (default is enabled)
 			const contextMenuCheckbox = document.getElementById("enableContextMenu");
 			contextMenuCheckbox.checked = data.enableContextMenu !== false;
+
+			// Load sentence break dash preference (default is em dash)
+			const sentenceBreakDashSelect =
+				document.getElementById("sentenceBreakDash");
+			sentenceBreakDashSelect.value = data.sentenceBreakDash || "em";
 		},
 	);
 });
@@ -32,11 +37,13 @@ document.getElementById("save").addEventListener("click", function () {
 	const defaultLanguage = select.value;
 	const enableContextMenu =
 		document.getElementById("enableContextMenu").checked;
+	const sentenceBreakDash = document.getElementById("sentenceBreakDash").value;
 
 	chrome.storage.sync.set(
 		{
 			defaultLanguage: defaultLanguage,
 			enableContextMenu: enableContextMenu,
+			sentenceBreakDash: sentenceBreakDash,
 		},
 		function () {
 			// Show success message
@@ -59,6 +66,11 @@ document.getElementById("save").addEventListener("click", function () {
 			chrome.runtime.sendMessage({
 				action: "updateContextMenu",
 				enabled: enableContextMenu,
+			});
+
+			chrome.runtime.sendMessage({
+				action: "updateSentenceBreakDash",
+				sentenceBreakDash: sentenceBreakDash,
 			});
 		},
 	);
