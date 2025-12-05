@@ -51,14 +51,14 @@ var processTextField = function (activeElement) {
 	return getValue(activeElement);
 };
 
-var replaceTypewriterPunctuation = function (g) {
+var replaceTypewriterPunctuation = function (g, trimTrailingSpaces) {
 	var splitterRegex =
 		/(?:```[\S\s]*?(?:```|$))|(?:`[\S\s]*?(?:`|$))|(?:\{code(?:\:.*?)?\}[\S\s]*?(?:\{code\}|$))|(?:\{noformat\}[\S\s]*?(?:\{noformat\}|$))/gi;
 	var f = false,
 		d = "",
 		h = g.split(splitterRegex);
 	if (h.length === 1) {
-		d = regex(g);
+		d = regex(g, trimTrailingSpaces);
 	} else {
 		var a = g.match(splitterRegex);
 		if (!h[0]) {
@@ -66,7 +66,7 @@ var replaceTypewriterPunctuation = function (g) {
 			f = true;
 		}
 		for (var b = 0; b < h.length; ++b) {
-			var c = regex(h[b]);
+			var c = regex(h[b], trimTrailingSpaces);
 			if (f) {
 				d += a[b] != null ? a[b] + c : c;
 			} else {
@@ -77,14 +77,20 @@ var replaceTypewriterPunctuation = function (g) {
 	return d;
 };
 
-var regex = function (g) {
+var regex = function (g, trimTrailingSpaces) {
+	var result = g;
+
+	// === ADVANCED SPACE HANDLING ===
+	// Trim trailing whitespace at end of lines (only when explicitly requested)
+	if (trimTrailingSpaces) {
+		result = result.replace(/[ \t]+$/gm, "");
+	}
+
+	// Normalize multiple spaces to single space (but not at start of line to preserve indentation)
+	result = result.replace(/(\S)[ \t]{2,}/g, "$1 ");
+
 	return (
-		g
-			// === ADVANCED SPACE HANDLING ===
-			// Trim trailing whitespace at end of lines
-			.replace(/[ \t]+$/gm, "")
-			// Normalize multiple spaces to single space (but not at start of line to preserve indentation)
-			.replace(/(\S)[ \t]{2,}/g, "$1 ")
+		result
 
 			// === QUOTE ENHANCEMENTS ===
 			// Fix double-comma quotes to proper bottom quotes (German/Czech style)
@@ -296,7 +302,7 @@ var formatTypography = function () {
 		// If there's a selection, format only the selection
 		if (!range.collapsed) {
 			var selectedText = sel.toString();
-			var formattedText = replaceTypewriterPunctuation(selectedText);
+			var formattedText = replaceTypewriterPunctuation(selectedText, true);
 
 			range.deleteContents();
 			var textNode = document.createTextNode(formattedText);
@@ -310,7 +316,7 @@ var formatTypography = function () {
 		} else {
 			// Format entire contentEditable
 			var originalText = activeElement.textContent;
-			var formattedText = replaceTypewriterPunctuation(originalText);
+			var formattedText = replaceTypewriterPunctuation(originalText, true);
 			activeElement.textContent = formattedText;
 
 			// Move cursor to end
@@ -331,7 +337,7 @@ var formatTypography = function () {
 			var selectedText = fullText.substring(start, end);
 			var afterSelection = fullText.substring(end);
 
-			var formattedSelection = replaceTypewriterPunctuation(selectedText);
+			var formattedSelection = replaceTypewriterPunctuation(selectedText, true);
 			activeElement.value =
 				beforeSelection + formattedSelection + afterSelection;
 
@@ -341,7 +347,7 @@ var formatTypography = function () {
 		} else {
 			// Format entire field
 			var cursorPos = start;
-			var formattedText = replaceTypewriterPunctuation(fullText);
+			var formattedText = replaceTypewriterPunctuation(fullText, true);
 			activeElement.value = formattedText;
 
 			// Try to maintain relative cursor position
