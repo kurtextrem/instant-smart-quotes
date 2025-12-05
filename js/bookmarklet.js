@@ -1,9 +1,19 @@
 /*
  * Instant Smart Quotes by Florian Zemke, Regex by Muthu Kannan and Geoffrey Booth
+ * Enhanced with features from Tipograph (https://github.com/pnevyk/tipograph)
  * https://github.com/Zemke/instant-smart-quotes
  *
- * Replace typewriter quotes, apostrophes, ellipses and dashes
+ * Replace typewriter quotes, apostrophes, ellipses, dashes, and common symbols
  * with their typographically correct counterparts as you type.
+ *
+ * Features:
+ * - Smart quotes (language-specific) with enhanced apostrophe handling
+ * - Inch (″) and foot (′) unit symbols
+ * - Em dashes (—) from three hyphens
+ * - En dashes (–) from two hyphens, number ranges, or sentence breaks
+ * - Ellipses (…) from three dots
+ * - Multiple space normalization
+ * - Copyright (©), trademark (™), and registered (®) symbols
  *
  * Wrap in backticks `"Thou shalt not use dumb quotes."` to ignore.
  * Also ignores triple-backtick ``` "code blocks" ```.
@@ -13,138 +23,334 @@ var enabled;
 var lang;
 
 var isTextField = function (elem) {
-  return !!(elem.tagName.toUpperCase() === 'TEXTAREA'
-      || elem.isContentEditable
-      || (elem.tagName.toUpperCase() === 'INPUT'
-          && elem.type.toUpperCase() === 'TEXT'));
+	return !!(
+		elem.tagName.toUpperCase() === "TEXTAREA" ||
+		elem.isContentEditable ||
+		(elem.tagName.toUpperCase() === "INPUT" &&
+			elem.type.toUpperCase() === "TEXT")
+	);
 };
 
 var charsTillEndOfStr = function (activeElement) {
-  return getValue(activeElement).length - getSelectionStart(activeElement);
+	return getValue(activeElement).length - getSelectionStart(activeElement);
 };
 
 var correctCaretPosition = function (activeElement, charsTillEndOfStr) {
-  var correctCaretPos = getValue(activeElement).length - charsTillEndOfStr;
-  setSelection(activeElement, correctCaretPos);
-  return correctCaretPos;
+	var correctCaretPos = getValue(activeElement).length - charsTillEndOfStr;
+	setSelection(activeElement, correctCaretPos);
+	return correctCaretPos;
 };
 
 var processTextField = function (activeElement) {
-  var charsTillEnfOfStrBeforeRegex = charsTillEndOfStr(activeElement);
-  setValue(activeElement, replaceTypewriterPunctuation(getValue(activeElement)));
-  correctCaretPosition(activeElement, charsTillEnfOfStrBeforeRegex);
-  return getValue(activeElement);
+	var charsTillEnfOfStrBeforeRegex = charsTillEndOfStr(activeElement);
+	setValue(
+		activeElement,
+		replaceTypewriterPunctuation(getValue(activeElement)),
+	);
+	correctCaretPosition(activeElement, charsTillEnfOfStrBeforeRegex);
+	return getValue(activeElement);
 };
 
 var replaceTypewriterPunctuation = function (g) {
-  var splitterRegex = /(?:```[\S\s]*?(?:```|$))|(?:`[\S\s]*?(?:`|$))|(?:\{code(?:\:.*?)?\}[\S\s]*?(?:\{code\}|$))|(?:\{noformat\}[\S\s]*?(?:\{noformat\}|$))/gi;
-  var f = false,
-      d = "",
-      h = g.split(splitterRegex);
-  if (h.length === 1) {
-    d = regex(g);
-  } else {
-    var a = g.match(splitterRegex);
-    if (!h[0]) {
-      h.shift();
-      f = true;
-    }
-    for (var b = 0; b < h.length; ++b) {
-      var c = regex(h[b]);
-      if (f) {
-        d += a[b] != null ? a[b] + c : c;
-      } else {
-        d += a[b] != null ? c + a[b] : c;
-      }
-    }
-  }
-  return d;
+	var splitterRegex =
+		/(?:```[\S\s]*?(?:```|$))|(?:`[\S\s]*?(?:`|$))|(?:\{code(?:\:.*?)?\}[\S\s]*?(?:\{code\}|$))|(?:\{noformat\}[\S\s]*?(?:\{noformat\}|$))/gi;
+	var f = false,
+		d = "",
+		h = g.split(splitterRegex);
+	if (h.length === 1) {
+		d = regex(g);
+	} else {
+		var a = g.match(splitterRegex);
+		if (!h[0]) {
+			h.shift();
+			f = true;
+		}
+		for (var b = 0; b < h.length; ++b) {
+			var c = regex(h[b]);
+			if (f) {
+				d += a[b] != null ? a[b] + c : c;
+			} else {
+				d += a[b] != null ? c + a[b] : c;
+			}
+		}
+	}
+	return d;
 };
 
 var regex = function (g) {
-  return g
-      .replace(new RegExp('(\\s|^|\\(|\\>|\\])(' + lang.replacePrimary[0] + ')(?=[^>\\]]*(<|\\[|$))', 'g'), "$1" + lang.primary[0])
-      .replace(new RegExp("(\\s|^|\\(|\\>|\\])(" + lang.replaceSecondary[0] + ")(?=[^>\\]]*(<|\\[|$))", 'g'), "$1" + lang.secondary[0])
-      .replace(new RegExp('(.)(' + lang.replacePrimary[1] + ')(?=[^>\\]]*(<|\\[|$))', 'g'), "$1" + lang.primary[1])
-      .replace(new RegExp("(.)(" + lang.replaceSecondary[1] + ")(?=[^>\\]]*(<|\\[|$))", 'g'), "$1" + lang.secondary[1])
-      .replace(/(\w|\s)-{3}(\w|\s)/g, "$1—$2")
-      .replace(/(\w|\s)-{2}(\w|\s)/g, "$1–$2")
-      .replace(/(\w|\s)–-(\w|\s)/g, "$1—$2")
-      .replace(/([^.…])\.{3}([^.…])/g, "$1…$2")
+	return (
+		g
+			// === ADVANCED SPACE HANDLING ===
+			// Trim trailing whitespace at end of lines
+			.replace(/[ \t]+$/gm, "")
+			// Normalize multiple spaces to single space (but not at start of line to preserve indentation)
+			.replace(/(\S)[ \t]{2,}/g, "$1 ")
 
-      // shortenings whitelist
-      .replace(/‘([0-9]{2}s?)/gi, "’$1")
-      .replace(/‘(em)/gi, "’$1")
-      .replace(/‘(twas)/gi, "’$1")
-      .replace(/‘(cause)/gi, "’$1")
-      .replace(/‘(n)/gi, "’$1");
+			// === QUOTE ENHANCEMENTS ===
+			// Fix double-comma quotes to proper bottom quotes (German/Czech style)
+			.replace(/,,/g, "„")
+
+			// Foot and inch symbols (must come before quote replacements)
+			// 5'10" or 6' 2" style measurements
+			.replace(/(\d+)\s*'\s*(\d+)\s*"/g, "$1′$2″")
+			.replace(/(\d+)\s*'/g, "$1′")
+			.replace(/(\d+)\s*"/g, "$1″")
+
+			// Primary quotes (opening)
+			.replace(
+				new RegExp(
+					"(\\s|^|\\(|\\>|\\])(" +
+						lang.replacePrimary[0] +
+						")(?=[^>\\]]*(<|\\[|$))",
+					"g",
+				),
+				"$1" + lang.primary[0],
+			)
+			// Secondary quotes (opening)
+			.replace(
+				new RegExp(
+					"(\\s|^|\\(|\\>|\\])(" +
+						lang.replaceSecondary[0] +
+						")(?=[^>\\]]*(<|\\[|$))",
+					"g",
+				),
+				"$1" + lang.secondary[0],
+			)
+			// Primary quotes (closing)
+			.replace(
+				new RegExp(
+					"(.)(" + lang.replacePrimary[1] + ")(?=[^>\\]]*(<|\\[|$))",
+					"g",
+				),
+				"$1" + lang.primary[1],
+			)
+			// Secondary quotes (closing)
+			.replace(
+				new RegExp(
+					"(.)(" + lang.replaceSecondary[1] + ")(?=[^>\\]]*(<|\\[|$))",
+					"g",
+				),
+				"$1" + lang.secondary[1],
+			)
+
+			// === ADVANCED DASH/HYPHEN RULES ===
+			// Three hyphens → em dash (requires word chars on both sides)
+			.replace(/(\w)-{3}(\w)/g, "$1—$2")
+			// Two hyphens → en dash (requires word chars on both sides)
+			.replace(/(\w)-{2}(\w)/g, "$1–$2")
+			// En dash + hyphen → em dash
+			.replace(/(\w)–-(\w)/g, "$1—$2")
+
+			// En dash for number ranges with optional spaces (1-5 or 2020-2024)
+			.replace(/(\d+)\s*-\s*(\d+)/g, "$1–$2")
+
+			// En dash for date ranges (January-March, Mon-Fri)
+			.replace(/(\b[A-Z][a-z]{2,})\s*-\s*(\b[A-Z][a-z]{2,})/g, "$1–$2")
+
+			// Em dash for sentence breaks: " - " → " — "
+			// Requires word characters on BOTH sides to avoid matching list markers
+			// e.g., "text - more" converts, but "- item" or "  - [x]" do NOT
+			.replace(/(\w) - (\w)/g, "$1 — $2")
+
+			// === ELLIPSIS ===
+			.replace(/([^.…])\.{3}([^.…])/g, "$1…$2")
+			// Handle ellipsis at start/end of string
+			.replace(/^\.\.\./g, "…")
+			.replace(/\.\.\.$/g, "…")
+
+			// === SPECIAL SYMBOLS ===
+			// Copyright, trademark, and registered symbols
+			.replace(/\(c\)/gi, "©")
+			.replace(/\(tm\)/gi, "™")
+			.replace(/\(r\)/gi, "®")
+
+			// === APOSTROPHE ENHANCEMENTS ===
+			// Possessives and contractions (must come after quote replacements)
+			// Common contractions
+			.replace(
+				/\b(don|won|can|couldn|wouldn|shouldn|didn|isn|aren|wasn|weren|hasn|haven|hadn)'t\b/gi,
+				function (match) {
+					return match.slice(0, -2) + "'t";
+				},
+			)
+			.replace(
+				/\b(I|you|we|they|he|she|it|who|what|there|here)'(ll|ve|re|d|m|s)\b/gi,
+				function (match, word, suffix) {
+					return word + "'" + suffix;
+				},
+			)
+
+			// Shortenings whitelist
+			.replace(/'([0-9]{2}s?)\b/gi, "'$1")
+			.replace(/\b'(em)\b/gi, "'$1")
+			.replace(/\b'(twas)\b/gi, "'$1")
+			.replace(/\b'(cause)\b/gi, "'$1")
+			.replace(/\b'(n)\b/gi, "'$1")
+			.replace(/\b(rock|pop)'n'(roll)\b/gi, "$1'n'$2")
+
+			// Possessive apostrophes (s' and s's)
+			.replace(/([a-z])s'/gi, function (match, letter) {
+				return letter + "s'";
+			})
+	);
 };
 
 var getValue = function (activeElement) {
-  if (activeElement.isContentEditable) {
-    return document.getSelection().anchorNode.textContent;
-  }
-  return activeElement.value;
+	if (activeElement.isContentEditable) {
+		return document.getSelection().anchorNode.textContent;
+	}
+	return activeElement.value;
 };
 
 var setValue = function (activeElement, newValue) {
-  if (activeElement.isContentEditable) {
-    var sel = document.getSelection();
+	if (activeElement.isContentEditable) {
+		var sel = document.getSelection();
 
-    if (!isTextNode(sel.anchorNode)) {
-      return;
-    }
+		if (!isTextNode(sel.anchorNode)) {
+			return;
+		}
 
-    return sel.anchorNode.textContent = newValue;
-  }
-  return activeElement.value = newValue;
+		return (sel.anchorNode.textContent = newValue);
+	}
+	return (activeElement.value = newValue);
 };
 
 var getSelectionStart = function (activeElement) {
-  if (activeElement.isContentEditable) {
-    return document.getSelection().anchorOffset;
-  }
-  return activeElement.selectionStart;
+	if (activeElement.isContentEditable) {
+		return document.getSelection().anchorOffset;
+	}
+	return activeElement.selectionStart;
 };
 
 var setSelection = function (activeElement, correctCaretPos) {
-  if (activeElement.isContentEditable) {
-    var range = document.createRange();
-    var sel = window.getSelection();
+	if (activeElement.isContentEditable) {
+		var range = document.createRange();
+		var sel = window.getSelection();
 
-    if (!isTextNode(sel.anchorNode)) {
-      var textNode = document.createTextNode("");
-      sel.anchorNode.insertBefore(textNode, sel.anchorNode.childNodes[0]);
-      range.setStart(textNode, 0);
-    } else {
-      range.setStart(sel.anchorNode, correctCaretPos);
-    }
+		if (!isTextNode(sel.anchorNode)) {
+			var textNode = document.createTextNode("");
+			sel.anchorNode.insertBefore(textNode, sel.anchorNode.childNodes[0]);
+			range.setStart(textNode, 0);
+		} else {
+			range.setStart(sel.anchorNode, correctCaretPos);
+		}
 
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    return;
-  }
+		range.collapse(true);
+		sel.removeAllRanges();
+		sel.addRange(range);
+		return;
+	}
 
-  activeElement.selectionStart = correctCaretPos;
-  activeElement.selectionEnd = correctCaretPos;
+	activeElement.selectionStart = correctCaretPos;
+	activeElement.selectionEnd = correctCaretPos;
 };
 
 var isTextNode = function (node) {
-  return node.nodeType === 3;
+	return node.nodeType === 3;
 };
 
-document.addEventListener('input', e => {
-  enabled && !e.isComposing && isTextField(e.target) && processTextField(e.target);
-}, true);
+// Format entire field or selection via context menu
+var formatTypography = function () {
+	var activeElement = document.activeElement;
+
+	if (!isTextField(activeElement)) {
+		return;
+	}
+
+	if (activeElement.isContentEditable) {
+		var sel = document.getSelection();
+		if (!sel.rangeCount) return;
+
+		var range = sel.getRangeAt(0);
+
+		// If there's a selection, format only the selection
+		if (!range.collapsed) {
+			var selectedText = sel.toString();
+			var formattedText = replaceTypewriterPunctuation(selectedText);
+
+			range.deleteContents();
+			var textNode = document.createTextNode(formattedText);
+			range.insertNode(textNode);
+
+			// Restore selection
+			range.setStartAfter(textNode);
+			range.collapse(true);
+			sel.removeAllRanges();
+			sel.addRange(range);
+		} else {
+			// Format entire contentEditable
+			var originalText = activeElement.textContent;
+			var formattedText = replaceTypewriterPunctuation(originalText);
+			activeElement.textContent = formattedText;
+
+			// Move cursor to end
+			range.selectNodeContents(activeElement);
+			range.collapse(false);
+			sel.removeAllRanges();
+			sel.addRange(range);
+		}
+	} else {
+		// Handle textarea and input fields
+		var start = activeElement.selectionStart;
+		var end = activeElement.selectionEnd;
+		var fullText = activeElement.value;
+
+		// If there's a selection, format only the selection
+		if (start !== end) {
+			var beforeSelection = fullText.substring(0, start);
+			var selectedText = fullText.substring(start, end);
+			var afterSelection = fullText.substring(end);
+
+			var formattedSelection = replaceTypewriterPunctuation(selectedText);
+			activeElement.value =
+				beforeSelection + formattedSelection + afterSelection;
+
+			// Restore selection around formatted text
+			var newEnd = start + formattedSelection.length;
+			activeElement.setSelectionRange(start, newEnd);
+		} else {
+			// Format entire field
+			var cursorPos = start;
+			var formattedText = replaceTypewriterPunctuation(fullText);
+			activeElement.value = formattedText;
+
+			// Try to maintain relative cursor position
+			var ratio = fullText.length > 0 ? cursorPos / fullText.length : 0;
+			var newCursorPos = Math.round(formattedText.length * ratio);
+			activeElement.setSelectionRange(newCursorPos, newCursorPos);
+		}
+	}
+
+	// Trigger input event so other listeners know the content changed
+	activeElement.dispatchEvent(new Event("input", { bubbles: true }));
+};
+
+document.addEventListener(
+	"input",
+	(e) => {
+		enabled &&
+			!e.isComposing &&
+			isTextField(e.target) &&
+			processTextField(e.target);
+	},
+	true,
+);
 
 chrome.runtime.onMessage.addListener(function (req, sender, cb) {
-  enabled = req.enabled;
-  lang = req.lang;
-  cb({location: req.location});
+	// Handle context menu format action
+	if (req.action === "formatTypography") {
+		formatTypography();
+		if (cb) cb({ success: true });
+		return true;
+	}
+
+	// Handle initialization
+	enabled = req.enabled;
+	lang = req.lang;
+	cb({ location: req.location });
 });
 
-chrome.runtime.sendMessage({question: 'enabled'}, function (res) {
-  enabled = res.enabled;
-  lang = res.lang;
+chrome.runtime.sendMessage({ question: "enabled" }, function (res) {
+	enabled = res.enabled;
+	lang = res.lang;
 });

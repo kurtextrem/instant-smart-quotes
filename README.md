@@ -1,29 +1,59 @@
 # Instant Smart Quotes
 
 > [!NOTE]
-> This fork updates the extension to support Manifest v3. No other changes.
+> This fork updates the extension to support Manifest v3 and adds:
+>
+> - advanced typography features from [Tipograph](https://github.com/pnevyk/tipograph) (MIT license)
+> - right-click -> “Format Typography” on inputs / textareas
 
-Replace typewriter quotes, apostrophes, ellipses and dashes with their typographically correct counterparts as you type.
+Replace typewriter quotes, apostrophes, ellipses, dashes, and special symbols with their typographically correct counterparts as you type.
 Instant Smart Quotes is the last extension you will need to write beautiful typographically correct texts.
 
-- Support for over 50 languages
-- Quickly enable and disable the instant replacements from the toolbar
-- Quickly change the language from the toolbar
-- All settings are saved per page and synched across all of your devices
-- Text in `backticks` will be ignored in favor of Markdown
+## Features
 
-Depending on which language you have set, the following chars will be replaced for language-specific replacements (comma-separated):
+### Real-Time Formatting (As You Type)
+
+- **Smart Quotes**: Language-specific curly quotes for over 50 languages
+- **Advanced Apostrophe Handling**: Proper apostrophes for contractions (don't, I'll, '90s) and possessives (James's)
+- **Dash Intelligence**:
+  - Em dashes (—) from three hyphens or spaced hyphens (` - ` → ` — `); does not replace them in lists (`- text`)
+  - En dashes (–) from two hyphens, number ranges (1-5 → 1–5), or date ranges (Mon-Fri)
+- **Quote Enhancements**:
+  - Foot (′) and inch (″) symbols for measurements (5'10" → 5′10″)
+  - Double-comma fix (,, → „)
+- **Special Symbols**: Copyright (©), trademark (™), and registered (®) from (c), (tm), (r)
+- **Space Normalization**: Multiple spaces reduced to single space, unless those at the beginning of a line. Trailing whitespaces at line ends are trimmed.
+- **Ellipses** (…) from three dots
+
+### Manual Formatting
+
+- **Right-Click Context Menu**: Right-click in any text field, textarea, or contentEditable element and select “Format Typography” to:
+  - Format selected text only (if you have text selected)
+  - Format entire field (if no selection)
+  - Apply all typography rules at once to existing text
+
+### Controls & Settings
+
+- **Quick Controls**: Enable/disable and change language from toolbar
+- **Per-Site Settings**: All settings saved per page and synced across devices
+- **Code-Aware**: Text in `backticks` and ```code blocks``` ignored
+
+## Language-Specific Replacements
+
+Depending on which language you have set, the following chars will be replaced for language-specific replacements:
 ', ", >>, <<
 
-Chars that will be replaced for no matter which language are the following (comma-separated):
-', --, ---, ...
+## Universal Replacements
 
-This website is a nice manual for English punctuation guidelines:
-<http://www.thepunctuationguide.com/>
+These chars will be replaced regardless of language:
+', --, ---, ..., (c), (tm), (r), foot/inch symbols
 
-Sources of which quotes to be used for which language:
-<https://en.wikipedia.org/wiki/Quotation_mark#Summary_table>
-<http://www.witch.westfalen.de/csstest/quotes/quotes.html>
+## Typography Resources
+
+- English punctuation guidelines: <http://www.thepunctuationguide.com/>
+- Quote styles by language: <https://en.wikipedia.org/wiki/Quotation_mark#Summary_table>
+- Quote reference: <http://www.witch.westfalen.de/csstest/quotes/quotes.html>
+- Typography best practices: [Practical Typography](https://practicaltypography.com/)
 
 `"Don't be dumb"`, “you’re using Instant Smart Quotes”. ✍️
 
