@@ -1,17 +1,12 @@
 # Instant Smart Quotes
 
 > [!NOTE]
-> This fork updates the extension to support Manifest v3 and adds:
->
-> - advanced typography features from [Tipograph](https://github.com/pnevyk/tipograph) (MIT license)
-> - right-click -> “Format Typography” on inputs / textareas
+> This fork updates the extension to support Manifest v3 and adds advanced typography features from [Tipograph](https://github.com/pnevyk/tipograph) (MIT license).
 
 Replace typewriter quotes, apostrophes, ellipses, dashes, and special symbols with their typographically correct counterparts as you type.
 Instant Smart Quotes is the last extension you will need to write beautiful typographically correct texts.
 
 ## Features
-
-### Real-Time Formatting (As You Type)
 
 - **Smart Quotes**: Language-specific curly quotes for over 50 languages
 - **Advanced Apostrophe Handling**: Proper apostrophes for contractions (don't, I'll, '90s) and possessives (James's)
@@ -24,16 +19,6 @@ Instant Smart Quotes is the last extension you will need to write beautiful typo
 - **Special Symbols**: Copyright (©), trademark (™), and registered (®) from (c), (tm), (r)
 - **Space Normalization**: Multiple spaces reduced to single space, unless those at the beginning of a line. Trailing whitespaces at line ends are trimmed.
 - **Ellipses** (…) from three dots
-
-### Manual Formatting
-
-- **Right-Click Context Menu**: Right-click in any text field, textarea, or contentEditable element and select “Format Typography” to:
-  - Format selected text only (if you have text selected)
-  - Format entire field (if no selection)
-  - Apply all typography rules at once to existing text
-
-### Controls & Settings
-
 - **Quick Controls**: Enable/disable and change language from toolbar
 - **Per-Site Settings**: All settings saved per page and synced across devices
 - **Code-Aware**: Text in `backticks` and ```code blocks``` ignored

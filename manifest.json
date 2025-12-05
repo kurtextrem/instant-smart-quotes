@@ -1,6 +1,6 @@
 {
   "name": "Instant Smart Quotes",
-  "version": "6.0.0",
+  "version": "7.0.0",
   "description": "Replace typewriter quotes, apostrophes, ellipses and dashes with their typographically correct counterparts as you type.",
   "author": "Florian Zemke",
   "homepage_url": "https://github.com/Zemke/instant-smart-quotes",
@@ -24,8 +24,7 @@
   },
   "permissions": [
     "storage",
-    "tabs",
-    "contextMenus"
+    "tabs"
   ],
   "host_permissions": [
     "<all_urls>"

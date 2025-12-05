@@ -420,25 +420,6 @@ var pageSettings;
 var currentPageSetting;
 var fallbackLang = setDefaultLang();
 
-// Create context menu on installation
-chrome.runtime.onInstalled.addListener(function () {
-	chrome.contextMenus.create({
-		id: "formatTypography",
-		title: "Format Typography",
-		contexts: ["editable"],
-	});
-});
-
-// Handle context menu clicks
-chrome.contextMenus.onClicked.addListener(function (info, tab) {
-	if (info.menuItemId === "formatTypography") {
-		chrome.tabs.sendMessage(tab.id, {
-			action: "formatTypography",
-			frameId: info.frameId,
-		});
-	}
-});
-
 chrome.runtime.onMessage.addListener(function (req, sender, cb) {
 	// Handle popup requests
 	if (req.action === "getConstants") {
