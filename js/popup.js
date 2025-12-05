@@ -1,44 +1,54 @@
-var bg = chrome.extension.getBackgroundPage();
 chrome.tabs.query({active: true, currentWindow: true}, init);
 
 function init(tabs) {
   var currentTab = tabs[0];
   var currentSwitchBtn;
 
-  chrome.browserAction.getBadgeText({tabId: currentTab.id}, setSwitchBtn);
+  // Get constants from background script
+  chrome.runtime.sendMessage({action: 'getConstants'}, function(response) {
+    var BADGE = response.BADGE;
+    var LANGUAGES = response.LANGUAGES;
 
-  function setSwitchBtn(badgeText) {
-    currentSwitchBtn = badgeText !== bg.BADGE.OFF.TEXT ? bg.BADGE.OFF : bg.BADGE.ON;
-    var otherStatusEl = document.getElementById('otherStatus');
-    otherStatusEl.innerHTML = currentSwitchBtn.TEXT;
-    otherStatusEl.style.backgroundColor = currentSwitchBtn.COLOR;
-  }
+    // Get the current badge text
+    chrome.action.getBadgeText({tabId: currentTab.id}, function(badgeText) {
+      function setSwitchBtn(badgeTextParam) {
+        currentSwitchBtn = badgeTextParam !== BADGE.OFF.TEXT ? BADGE.OFF : BADGE.ON;
+        var otherStatusEl = document.getElementById('otherStatus');
+        otherStatusEl.innerHTML = currentSwitchBtn.TEXT;
+        otherStatusEl.style.backgroundColor = currentSwitchBtn.COLOR;
+      }
 
-  document.getElementById('switch').addEventListener('click', function (e) {
-    var currentBadge = bg.toggle(currentTab);
-    dd(currentBadge.TEXT);
-    setSwitchBtn(currentBadge.TEXT);
-    window.close();
-  });
+      setSwitchBtn(badgeText);
 
-  var langList = document.getElementById('langList');
-
-  var i = 0;
-  for (;i < bg.LANGUAGES.length; i++) {
-    var li = document.createElement("li");
-    li.appendChild(document.createTextNode(bg.LANGUAGES[i].label));
-    (function (index) {
-      li.addEventListener('click', function (e) {
-        switchLangTo(bg.LANGUAGES[index]);
+      document.getElementById('switch').addEventListener('click', function (e) {
+        chrome.runtime.sendMessage({action: 'toggle', tab: currentTab}, function(response) {
+          dd(response.badge.TEXT);
+          setSwitchBtn(response.badge.TEXT);
+          window.close();
+        });
       });
-    })(i);
-    langList.appendChild(li);
-  }
 
-  function switchLangTo(lang) {
-    bg.switchLangTo(lang, currentTab);
-    window.close();
-  }
+      var langList = document.getElementById('langList');
+
+      var i = 0;
+      for (;i < LANGUAGES.length; i++) {
+        var li = document.createElement("li");
+        li.appendChild(document.createTextNode(LANGUAGES[i].label));
+        (function (index) {
+          li.addEventListener('click', function (e) {
+            switchLangTo(LANGUAGES[index]);
+          });
+        })(i);
+        langList.appendChild(li);
+      }
+
+      function switchLangTo(lang) {
+        chrome.runtime.sendMessage({action: 'switchLangTo', lang: lang, tab: currentTab}, function() {
+          window.close();
+        });
+      }
+    });
+  });
 }
 
 function dd(variable) {

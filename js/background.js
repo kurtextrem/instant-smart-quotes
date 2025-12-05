@@ -1028,6 +1028,25 @@ var currentPageSetting;
 var fallbackLang = setDefaultLang();
 
 chrome.runtime.onMessage.addListener(function (req, sender, cb) {
+  // Handle popup requests
+  if (req.action === 'getConstants') {
+    cb({BADGE: BADGE, LANGUAGES: LANGUAGES});
+    return true;
+  }
+
+  if (req.action === 'toggle') {
+    var badge = toggle(req.tab);
+    cb({badge: badge});
+    return true;
+  }
+
+  if (req.action === 'switchLangTo') {
+    switchLangTo(req.lang, req.tab);
+    cb({});
+    return true;
+  }
+
+  // Handle content script initialization requests
   chrome.storage.sync.get(STORAGE_KEY, function (storage) {
     var pageSettingsFromStorage = storage[STORAGE_KEY];
 
@@ -1083,8 +1102,8 @@ function setBadge(newBadge, tabId) {
   currentBadge = newBadge;
   var badgeText = currentBadge === BADGE.ON ? formatLangCode(currentPageSetting.lang.code) : BADGE.OFF.TEXT;
 
-  chrome.browserAction.setBadgeText({text: badgeText, tabId: tabId});
-  chrome.browserAction.setBadgeBackgroundColor({color: currentBadge.COLOR, tabId: tabId});
+  chrome.action.setBadgeText({text: badgeText, tabId: tabId});
+  chrome.action.setBadgeBackgroundColor({color: currentBadge.COLOR, tabId: tabId});
 }
 
 function getPageFromSettings(location) {
