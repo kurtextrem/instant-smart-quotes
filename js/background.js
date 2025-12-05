@@ -418,7 +418,16 @@ var STORAGE_KEY = "InstantSmartQuotes";
 var currentBadge;
 var pageSettings;
 var currentPageSetting;
-var fallbackLang = setDefaultLang();
+var fallbackLang;
+
+// Initialize default language from storage or browser setting
+chrome.storage.sync.get("defaultLanguage", function (data) {
+	if (data.defaultLanguage) {
+		fallbackLang = populateLangByCode(data.defaultLanguage);
+	} else {
+		fallbackLang = setDefaultLang();
+	}
+});
 
 chrome.runtime.onMessage.addListener(function (req, sender, cb) {
 	// Handle popup requests
@@ -439,17 +448,40 @@ chrome.runtime.onMessage.addListener(function (req, sender, cb) {
 		return true;
 	}
 
+	// Handle options page update
+	if (req.action === "updateDefaultLanguage") {
+		fallbackLang = req.language
+			? populateLangByCode(req.language)
+			: setDefaultLang();
+		cb({});
+		return true;
+	}
+
+	// Handle context menu toggle
+	if (req.action === "updateContextMenu") {
+		if (req.enabled) {
+			createContextMenu();
+		} else {
+			removeContextMenu();
+		}
+		cb({});
+		return true;
+	}
+
 	// Handle content script initialization requests
 	chrome.storage.sync.get(STORAGE_KEY, function (storage) {
 		var pageSettingsFromStorage = storage[STORAGE_KEY];
 
+		// Ensure fallbackLang is initialized
+		var defaultLang = fallbackLang || populateLangByCode("en");
+
 		if (!pageSettingsFromStorage) {
-			cb({ location: location, lang: fallbackLang, enabled: true });
+			cb({ location: location, lang: defaultLang, enabled: true });
 			pageSettings = [];
 			currentPageSetting = {
 				enabled: true,
 				location: sender.tab.url,
-				lang: fallbackLang,
+				lang: defaultLang,
 			};
 			setBadge(BADGE.ON, sender.tab.id);
 		} else {
@@ -471,6 +503,15 @@ chrome.runtime.onMessage.addListener(function (req, sender, cb) {
 });
 
 function toggle(tab, toggleLang) {
+	// Ensure currentPageSetting exists
+	if (!currentPageSetting) {
+		currentPageSetting = {
+			enabled: true,
+			location: tab.url,
+			lang: fallbackLang || populateLangByCode("en"),
+		};
+	}
+
 	if (toggleLang === true) {
 		setBadge(BADGE.ON, tab.id);
 	} else {
@@ -503,13 +544,27 @@ function toggle(tab, toggleLang) {
 }
 
 function switchLangTo(lang, tab) {
-	currentPageSetting.lang = lang;
-	currentPageSetting.enabled = true;
+	if (!currentPageSetting) {
+		currentPageSetting = {
+			enabled: true,
+			location: tab.url,
+			lang: lang,
+		};
+	} else {
+		currentPageSetting.lang = lang;
+		currentPageSetting.enabled = true;
+	}
 	toggle(tab, true);
 }
 
 function setBadge(newBadge, tabId) {
 	currentBadge = newBadge;
+
+	// Ensure currentPageSetting exists
+	if (!currentPageSetting || !currentPageSetting.lang) {
+		return;
+	}
+
 	var badgeText =
 		currentBadge === BADGE.ON
 			? formatLangCode(currentPageSetting.lang.code)
@@ -533,7 +588,11 @@ function getPageFromSettings(location) {
 		}
 	}
 
-	return { location: location, enabled: true, lang: fallbackLang };
+	return {
+		location: location,
+		enabled: true,
+		lang: fallbackLang || populateLangByCode("en"),
+	};
 }
 
 function updatePageFromSettings(location, newKeyValue) {
@@ -630,3 +689,55 @@ function formatLangCode(langCode) {
 function isUndefined(variable) {
 	return typeof variable === "undefined";
 }
+
+// Create context menu on installation (if enabled)
+chrome.runtime.onInstalled.addListener(function () {
+	chrome.storage.sync.get("enableContextMenu", function (data) {
+		// Default to enabled if not set
+		if (data.enableContextMenu !== false) {
+			createContextMenu();
+		}
+	});
+});
+
+// Initialize context menu on startup
+chrome.storage.sync.get("enableContextMenu", function (data) {
+	if (data.enableContextMenu !== false) {
+		createContextMenu();
+	}
+});
+
+function createContextMenu() {
+	chrome.contextMenus.create(
+		{
+			id: "formatTypography",
+			title: "Format Typography",
+			contexts: ["editable"],
+		},
+		function () {
+			// Ignore errors if menu already exists
+			if (chrome.runtime.lastError) {
+				// Menu already exists, ignore
+			}
+		},
+	);
+}
+
+function removeContextMenu() {
+	chrome.contextMenus.remove("formatTypography", function () {
+		// Ignore errors if menu doesn't exist
+		if (chrome.runtime.lastError) {
+			// Menu doesn't exist, ignore
+		}
+	});
+}
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener(function (info, tab) {
+	if (info.menuItemId === "formatTypography") {
+		chrome.tabs.sendMessage(tab.id, {
+			action: "formatTypography",
+			frameId: info.frameId,
+		});
+	}
+});

@@ -25,8 +25,10 @@ function init(tabs) {
 				chrome.runtime.sendMessage(
 					{ action: "toggle", tab: currentTab },
 					function (response) {
-						dd(response.badge.TEXT);
-						setSwitchBtn(response.badge.TEXT);
+						if (response && response.badge) {
+							dd(response.badge.TEXT);
+							setSwitchBtn(response.badge.TEXT);
+						}
 						window.close();
 					},
 				);

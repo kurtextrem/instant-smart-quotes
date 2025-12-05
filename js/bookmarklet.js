@@ -261,6 +261,14 @@ document.addEventListener(
 );
 
 chrome.runtime.onMessage.addListener(function (req, sender, cb) {
+	// Handle context menu format action
+	if (req.action === "formatTypography") {
+		formatTypography();
+		if (cb) cb({ success: true });
+		return true;
+	}
+
+	// Handle initialization
 	enabled = req.enabled;
 	lang = req.lang;
 	cb({ location: req.location });
@@ -270,3 +278,79 @@ chrome.runtime.sendMessage({ question: "enabled" }, function (res) {
 	enabled = res.enabled;
 	lang = res.lang;
 });
+
+// Format entire field or selection via context menu
+var formatTypography = function () {
+	var activeElement = document.activeElement;
+
+	if (!isTextField(activeElement)) {
+		return;
+	}
+
+	if (activeElement.isContentEditable) {
+		var sel = document.getSelection();
+		if (!sel.rangeCount) return;
+
+		var range = sel.getRangeAt(0);
+
+		// If there's a selection, format only the selection
+		if (!range.collapsed) {
+			var selectedText = sel.toString();
+			var formattedText = replaceTypewriterPunctuation(selectedText);
+
+			range.deleteContents();
+			var textNode = document.createTextNode(formattedText);
+			range.insertNode(textNode);
+
+			// Restore selection
+			range.setStartAfter(textNode);
+			range.collapse(true);
+			sel.removeAllRanges();
+			sel.addRange(range);
+		} else {
+			// Format entire contentEditable
+			var originalText = activeElement.textContent;
+			var formattedText = replaceTypewriterPunctuation(originalText);
+			activeElement.textContent = formattedText;
+
+			// Move cursor to end
+			range.selectNodeContents(activeElement);
+			range.collapse(false);
+			sel.removeAllRanges();
+			sel.addRange(range);
+		}
+	} else {
+		// Handle textarea and input fields
+		var start = activeElement.selectionStart;
+		var end = activeElement.selectionEnd;
+		var fullText = activeElement.value;
+
+		// If there's a selection, format only the selection
+		if (start !== end) {
+			var beforeSelection = fullText.substring(0, start);
+			var selectedText = fullText.substring(start, end);
+			var afterSelection = fullText.substring(end);
+
+			var formattedSelection = replaceTypewriterPunctuation(selectedText);
+			activeElement.value =
+				beforeSelection + formattedSelection + afterSelection;
+
+			// Restore selection around formatted text
+			var newEnd = start + formattedSelection.length;
+			activeElement.setSelectionRange(start, newEnd);
+		} else {
+			// Format entire field
+			var cursorPos = start;
+			var formattedText = replaceTypewriterPunctuation(fullText);
+			activeElement.value = formattedText;
+
+			// Try to maintain relative cursor position
+			var ratio = fullText.length > 0 ? cursorPos / fullText.length : 0;
+			var newCursorPos = Math.round(formattedText.length * ratio);
+			activeElement.setSelectionRange(newCursorPos, newCursorPos);
+		}
+	}
+
+	// Trigger input event so other listeners know the content changed
+	activeElement.dispatchEvent(new Event("input", { bubbles: true }));
+};
